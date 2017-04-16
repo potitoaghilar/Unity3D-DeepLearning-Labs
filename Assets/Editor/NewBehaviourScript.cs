@@ -10,7 +10,7 @@ public class NewBehaviourScript : MonoBehaviour {
     {
         if (transform.tag == "neuron")
         {
-            GUI.color = Color.black;
+            GUI.color = Color.yellow;
             Handles.Label(transform.position + new Vector3(0, 2, 0), GameObject.Find("Lab").GetComponent<Lab>().gController.getBrain(0).n_values[int.Parse(transform.gameObject.name)].ToString());
             GUI.color = Color.white;
         }

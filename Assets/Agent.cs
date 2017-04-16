@@ -12,8 +12,9 @@ public class Agent : MonoBehaviour {
     public GameObject eye_sensor;
     public Material neuronMaterial;
     RaycastHit hit;
+    public sbyte[] genome;
 
-    double health = 20, startTime, points = 0;
+    double health = 1, startTime, points = 0;
 
     public int genomeId = -1;
     public GeneticController gController;
@@ -38,13 +39,13 @@ public class Agent : MonoBehaviour {
 
     void Update() {
 
-        if (health <= 0)
+        /*if (health <= 0)
         {
             gameObject.active = false;
             fitness = points + health / 10;
         }
         else
-        {
+        {*/
             // Set inputs
             for (int i = 0; i < rays * 2; i += 2)
             {
@@ -80,9 +81,9 @@ public class Agent : MonoBehaviour {
             transform.position += 10 * transform.forward * Time.deltaTime;
             transform.Rotate(0, 10 * (rotate * 2 - 1), 0);
 
-        }
+        //}
 
-        health -= Time.deltaTime;
+        //health -= Time.deltaTime;
     }
 
     void OnTriggerEnter(Collider coll)
@@ -95,8 +96,12 @@ public class Agent : MonoBehaviour {
     {
         if (coll.gameObject.tag == "wall")
         {
-            points -= 2;
-            health -= 2;
+            health -= .2;
         }
+    }
+
+    public void end()
+    {
+        fitness = 20 * points + 5 * health;
     }
 }

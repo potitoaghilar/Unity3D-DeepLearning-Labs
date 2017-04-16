@@ -16,6 +16,7 @@ public class Lab : MonoBehaviour {
     public int[] brainStructure;
     public int genomes = 12, outputs;
     double[] fitness;
+    double time = 20;
 
     public double bestFitness = 0, mutationProb = 0;
 
@@ -24,23 +25,26 @@ public class Lab : MonoBehaviour {
         gController = new GeneticController(genomes, 40, brainStructure, outputs);
         agents = new GameObject[genomes];
         fitness = new double[genomes];
-
-        setEnvironment(49, 49);
-
         gController.createGeneration();
+        setEnvironment(49, 49);
         Debug.Log("Generation: " + gController.getGeneration());
     }
 
     void Update()
     {
 
-        int actives = 0;
+        /*int actives = 0;
         foreach (GameObject a in agents)
             if (a.active)
-                actives++;
+                actives++;*/
 
-        if (actives == 0)
+        if (time <= 0)
         {
+            time = 20;
+
+            foreach (GameObject a in agents)
+                a.GetComponent<Agent>().end();
+
             for (int i = 0; i < agents.Length; i++)
             {
                 fitness[i] = agents[i].GetComponent<Agent>().fitness;
@@ -74,6 +78,8 @@ public class Lab : MonoBehaviour {
                 Instantiate(point, new Vector3(x, 1.5f, y), Quaternion.identity);
         }
 
+        time -= Time.deltaTime;
+
     }
 
     void setEnvironment(float x, float y)
@@ -83,10 +89,11 @@ public class Lab : MonoBehaviour {
         foreach (GameObject g in GameObject.FindGameObjectsWithTag("neuron")) Destroy(g);
         for (int i = 0; i < genomes; i++)
         {
-            agents[i] = Instantiate(agent, new Vector3(0, 1.2f, 0), Quaternion.identity);
-            //agents[i] = Instantiate(agent, new Vector3(x * (float)random.NextDouble() - x / 2, 1.2f, y * (float)random.NextDouble() - y / 2), Quaternion.identity);
+            //agents[i] = Instantiate(agent, new Vector3(0, 1.2f, 0), Quaternion.identity);
+            agents[i] = Instantiate(agent, new Vector3(x * (float)random.NextDouble() - x / 2, 1.2f, y * (float)random.NextDouble() - y / 2), Quaternion.identity);
             agents[i].GetComponent<Agent>().gController = gController;
             agents[i].GetComponent<Agent>().genomeId = i;
+            agents[i].GetComponent<Agent>().genome = gController.getGenome(i);
         }
         /*for (int i = 0; i < genomes; i++)
         {

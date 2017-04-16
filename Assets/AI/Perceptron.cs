@@ -28,6 +28,11 @@ namespace GeneticAlgorithm
             return output;
         }
 
+        public double getWeight(int wId)
+        {
+            return weights[wId];
+        }
+
         // Dot product
         private double dot_product(double[] vector1, double[] vector2)
         {

@@ -11,7 +11,7 @@ namespace GeneticAlgorithm
         // GA params
         private int genomes_count, current_generation = 0;
         private static System.Random random = new System.Random();
-        sbyte[][] genomes;
+        private sbyte[][] genomes;
         NeuroNetwork[] brains;
         double[] fitness;
         public double mutationProb = 0;
@@ -51,7 +51,7 @@ namespace GeneticAlgorithm
                 // Generate new solutions trying to improve them
                 improveGeneration();
             }
-
+            
             applyGenomesInBrains();
             current_generation++;
         }
@@ -115,6 +115,9 @@ namespace GeneticAlgorithm
                 // Apply some mutations
                 mutationProb = 1 / fitness.Max();
                 if (mutationProb > .2) mutationProb = .2;
+                if (fitness.Max() < 0) {
+                    mutationProb = .5;
+                }
 
                 /*int m1 = genome1[i], m2 = genome2[i], m = random.Next(-40, 40);
                 if (random.NextDouble() < mutationProb)
@@ -175,6 +178,11 @@ namespace GeneticAlgorithm
         public NeuroNetwork getBrain(int id)
         {
             return brains[id];
+        }
+
+        public sbyte[] getGenome(int id)
+        {
+            return genomes[id];
         }
 
     }

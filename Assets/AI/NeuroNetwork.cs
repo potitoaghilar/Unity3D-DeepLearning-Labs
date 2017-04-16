@@ -71,6 +71,13 @@ namespace GeneticAlgorithm
                 {
                     inputs_n[a].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, (float)(datas[a] < .1 ? .1f : datas[a])));
                     n_values[a] = double.Parse(datas[a].ToString("F2"));
+                    for (int j = 0; j < neurons_per_layer[0]; j++)
+                    {
+                        if (Mathf.Abs((float)datas[a]) > .1 && perceptrons[j].getWeight(a) < 0)
+                            Debug.DrawLine(inputs_n[a].transform.position, neurons[j].transform.position, new Color(Mathf.Abs((float)perceptrons[j].getOutput()), 0, 0));
+                        else if (Mathf.Abs((float)datas[a]) > .1 && perceptrons[j].getWeight(a) > 0)
+                            Debug.DrawLine(inputs_n[a].transform.position, neurons[j].transform.position, new Color(0, Mathf.Abs((float)perceptrons[j].getOutput()), 0));
+                    }
                 }
             }
 
@@ -89,6 +96,14 @@ namespace GeneticAlgorithm
                     {
                         neurons[p_index].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, (float)(perceptrons[p_index].getOutput() < .1 ? .1f : perceptrons[p_index].getOutput())));
                         n_values[datas.Length + p_index] = double.Parse(perceptrons[p_index].getOutput().ToString("F2"));
+                        if (i > 0)
+                            for (int j = 0; j < neurons_per_layer[i - 1]; j++)
+                            {
+                                if(Mathf.Abs((float)perceptrons[p_index].getOutput()) > .1 && perceptrons[p_index].getWeight(j) < 0) 
+                                    Debug.DrawLine(neurons[p_index].transform.position, neurons[p_index - o - neurons_per_layer[i - 1] + j].transform.position, new Color(Mathf.Abs((float)perceptrons[p_index].getOutput()), 0, 0));
+                                else if(Mathf.Abs((float)perceptrons[p_index].getOutput()) > .1 && perceptrons[p_index].getWeight(j) > 0)
+                                    Debug.DrawLine(neurons[p_index].transform.position, neurons[p_index - o - neurons_per_layer[i - 1] + j].transform.position, new Color(0, Mathf.Abs((float)perceptrons[p_index].getOutput()), 0));
+                            }
                     }
 
                     p_index++;
