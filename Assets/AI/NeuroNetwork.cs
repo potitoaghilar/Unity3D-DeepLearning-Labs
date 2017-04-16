@@ -69,7 +69,7 @@ namespace GeneticAlgorithm
             {
                 for (int a = 0; a < datas.Length; a++)
                 {
-                    inputs_n[a].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, (float)(datas[a] < .1 ? .1f : datas[a])));
+                    inputs_n[a].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, Mathf.Abs((float)(datas[a] < .1 ? .1f : datas[a]))));
                     n_values[a] = double.Parse(datas[a].ToString("F2"));
                     for (int j = 0; j < neurons_per_layer[0]; j++)
                     {
@@ -94,7 +94,7 @@ namespace GeneticAlgorithm
 
                     if (showNet)
                     {
-                        neurons[p_index].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, (float)(perceptrons[p_index].getOutput() < .1 ? .1f : perceptrons[p_index].getOutput())));
+                        neurons[p_index].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, (float)(Mathf.Abs((float)perceptrons[p_index].getOutput()) < .1 ? .1f : Mathf.Abs((float)perceptrons[p_index].getOutput()))));
                         n_values[datas.Length + p_index] = double.Parse(perceptrons[p_index].getOutput().ToString("F2"));
                         if (i > 0)
                             for (int j = 0; j < neurons_per_layer[i - 1]; j++)
@@ -169,7 +169,7 @@ namespace GeneticAlgorithm
                 for (int nn = 0; nn < neurons_per_layer[l]; nn++)
                 {
                     neurons[n] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                    neurons[n].transform.position = new Vector3(l * 20, 50, ((neurons_per_layer[l] / 2 - nn) * 5));
+                    neurons[n].transform.position = new Vector3(l * 20, 50, ((neurons_per_layer[l] / 2 - nn) * 10));
                     neurons[n].GetComponent<MeshRenderer>().material = neuronMaterial;
                     neurons[n].tag = "neuron";
                     neurons[n].name = (n + input_nodes).ToString();

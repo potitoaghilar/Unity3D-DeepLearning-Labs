@@ -22,7 +22,7 @@ public class Lab : MonoBehaviour {
 
     void Start()
     {
-        gController = new GeneticController(genomes, 40, brainStructure, outputs);
+        gController = new GeneticController(genomes, 60, brainStructure, outputs);
         agents = new GameObject[genomes];
         fitness = new double[genomes];
         gController.createGeneration();
@@ -75,7 +75,13 @@ public class Lab : MonoBehaviour {
                 if (dist < minDistance) minDistance = dist;
             }
             if (minDistance > 10)
-                Instantiate(point, new Vector3(x, 1.5f, y), Quaternion.identity);
+            {
+                GameObject p = Instantiate(point, new Vector3(x, 1.5f, y), Quaternion.identity);
+                float dist = Vector3.Distance(Vector3.zero, p.transform.position);
+                dist = Mathf.Pow(2, dist / 50);
+                if (dist < 1) dist = 1;
+                p.name = dist.ToString();
+            }
         }
 
         time -= Time.deltaTime;

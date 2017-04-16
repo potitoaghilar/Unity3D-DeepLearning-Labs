@@ -7,7 +7,7 @@ using System.Threading;
 public class Agent : MonoBehaviour {
 
     const float multiplier = .3f;
-    public float back = 0, rotate = 0;
+    public float speed = 0, rotate = 0;
     Rigidbody rigidbody;
     public GameObject eye_sensor;
     public Material neuronMaterial;
@@ -24,72 +24,70 @@ public class Agent : MonoBehaviour {
     public LayerMask lm;
 
     const int rays = 20;
-    const float deg = 90;
+    const float deg = 120;
 
     void Start() {
-        Physics.IgnoreLayerCollision(8, 8, true);
+        //Physics.IgnoreLayerCollision(8, 8, true);
         rigidbody = gameObject.AddComponent<Rigidbody>();
         rigidbody.constraints = RigidbodyConstraints.FreezeRotation;
         startTime = Time.time;
-        inputs = new double[rays * 2];
+        inputs = new double[rays * 3];
         outputs = new double[1];
 
         if (genomeId == 0) gController.printANetwork(genomeId, neuronMaterial);
     }
 
     void Update() {
-
-        /*if (health <= 0)
+        
+        for (int i = 0; i < rays * 3; i += 3)
         {
-            gameObject.active = false;
-            fitness = points + health / 10;
-        }
-        else
-        {*/
-            // Set inputs
-            for (int i = 0; i < rays * 2; i += 2)
+            if (Physics.Raycast(eye_sensor.transform.position, Quaternion.Euler(0, -deg / 2 + i * (deg / rays) / 2, 0) * transform.forward, out hit, 15, lm))
             {
-                if (Physics.Raycast(eye_sensor.transform.position, Quaternion.Euler(0, -deg / 2 + i * (deg / rays) / 2, 0) * transform.forward, out hit, 15, lm))
+                Color color = Color.red;
+
+                if (hit.transform.tag == "point")
                 {
-                    Color color = Color.red;
-
-                    if (hit.transform.tag == "point")
-                    {
-                        inputs[i] = hit.distance / 15;
-                        inputs[i + 1] = 0;
-                        color = Color.green;
-                    }
-                    else if (hit.transform.tag == "wall")
-                    {
-                        inputs[i] = 0;
-                        inputs[i + 1] = hit.distance / 15;
-                    }
-
-
-                    Debug.DrawLine(eye_sensor.transform.position, hit.point, color);
+                    inputs[i] = double.Parse(hit.transform.name) / 2;
+                    inputs[i + 1] = 0;
+                    inputs[i + 2] = 0;
+                    color = Color.green;
                 }
-                else
+                else if (hit.transform.tag == "wall")
+                {
+                    inputs[i] = 0;
+                    inputs[i + 1] = hit.distance / 15;
+                    inputs[i + 2] = 0;
+                }
+                else if (hit.transform.tag == "agent")
                 {
                     inputs[i] = 0;
                     inputs[i + 1] = 0;
+                    inputs[i + 2] = hit.distance / 50;
+                    color = Color.blue;
                 }
+
+
+                Debug.DrawLine(eye_sensor.transform.position, hit.point, color);
             }
+            else
+            {
+                inputs[i] = 0;
+                inputs[i + 1] = 0;
+            }
+        }
 
-            outputs = gController.executeGenome(genomeId, inputs);
-            rotate = (float)outputs[0];
+        outputs = gController.executeGenome(genomeId, inputs);
+        speed = (float)outputs[0];
+        rotate = (float)outputs[1];
 
-            transform.position += 10 * transform.forward * Time.deltaTime;
-            transform.Rotate(0, 10 * (rotate * 2 - 1), 0);
-
-        //}
-
-        //health -= Time.deltaTime;
+        transform.position += speed * 10 * transform.forward * Time.deltaTime;
+        transform.Rotate(0, 50 * (rotate - .5f), 0);
     }
 
     void OnTriggerEnter(Collider coll)
     {
+        points += double.Parse(coll.gameObject.name);
         Destroy(coll.gameObject);
-        points += 1;
     }
 
     void OnCollisionEnter(Collision coll)
@@ -102,6 +100,6 @@ public class Agent : MonoBehaviour {
 
     public void end()
     {
-        fitness = 20 * points + 5 * health;
+        fitness = 5 * points + 5 * health;
     }
 }
