@@ -1,25 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using NeuralNetwork;
+using UnityEngine;
 
 namespace GeneticAlgorithm
 {
-    public class GeneticController
+    public class GeneticController : MonoBehaviour
     {
 
         // GA params
         private int genomes_count, current_generation = 0;
-        private static Random random = new Random();
-        NeuroNetwork[] genomes;
+        private static System.Random random = new System.Random();
+        sbyte[][] genomes;
+        NeuroNetwork[] brains;
         double[] fitness;
-        const int solution_selection_for_crossover = 2; // Not edit
+        public double mutationProb = 0;
 
         // NeuroNetwork params
         private int neuro_input_nodes, neuro_output_nodes;
         private int[] neurons_per_layer;
-        
+
 
         public GeneticController(int genomes_count, int neuro_input_nodes, int[] neurons_per_layer, int neuro_output_nodes)
         {
@@ -35,12 +35,15 @@ namespace GeneticAlgorithm
             if (current_generation == 0)
             {
                 // Generate random genomes on first generation
-                genomes = new NeuroNetwork[genomes_count];
+                brains = new NeuroNetwork[genomes_count];
+                genomes = new sbyte[genomes_count][];
                 fitness = new double[genomes_count];
 
-                for (int i = 0; i < genomes.Length; i++)
+                for (int i = 0; i < brains.Length; i++)
                 {
-                    genomes[i] = new NeuroNetwork(neuro_input_nodes, neurons_per_layer, neuro_output_nodes, random);
+                    genomes[i] = new sbyte[NeuroNetwork.calculateGenomeLength(neuro_input_nodes, neurons_per_layer, neuro_output_nodes)];
+                    for (int g = 0; g < genomes[i].Length; g++)
+                        genomes[i][g] = (sbyte)random.Next(-128, 127);
                 }
             }
             else
@@ -49,66 +52,93 @@ namespace GeneticAlgorithm
                 improveGeneration();
             }
 
+            applyGenomesInBrains();
             current_generation++;
+        }
+
+        private void applyGenomesInBrains()
+        {
+            for (int i = 0; i < genomes.Length; i++)
+            {
+                brains[i] = new NeuroNetwork(neuro_input_nodes, neurons_per_layer, neuro_output_nodes, genomes[i]);
+            }
         }
 
         private void improveGeneration()
         {
             // Selecting better solutions
-            Dictionary<NeuroNetwork, double> genomes_dictionary = new Dictionary<NeuroNetwork, double>();
+            Dictionary<sbyte[], double> genomes_dictionary = new Dictionary<sbyte[], double>();
             for (int i = 0; i < genomes_count; i++)
                 genomes_dictionary.Add(genomes[i], fitness[i]);
-            genomes_dictionary = genomes_dictionary.OrderByDescending(key => key.Value).Take(solution_selection_for_crossover).ToDictionary(pair => pair.Key, pair => pair.Value);
+            genomes_dictionary = genomes_dictionary.OrderByDescending(key => key.Value).Take(2).ToDictionary(pair => pair.Key, pair => pair.Value);
 
-            // Crente new genomes array
-            NeuroNetwork[] newGenomes = new NeuroNetwork[genomes_count];
+            // Create new genomes array
+            sbyte[][] newGenomes = new sbyte[genomes_count][];
 
-            // Keep original 2 better solutions
-            newGenomes[0] = genomes_dictionary.Keys.First();
-            newGenomes[1] = genomes_dictionary.Keys.Last();
+            // Keep best genomes
+            newGenomes[0] = crossover(genomes_dictionary.Keys.First(), genomes_dictionary.Keys.First());
+            newGenomes[1] = crossover(genomes_dictionary.Keys.Last(), genomes_dictionary.Keys.Last());
 
-            // Cross-over solutions
-            NeuroNetwork[] hybrids = crossover(newGenomes[0], newGenomes[1]);
-            for (int i = 0; i < hybrids.Length; i++)
-            {
-                newGenomes[i + 2] = hybrids[i]; // Add crossed over solutions to new generation
-            }
-
-            // Mutated solutions
-            for (int i = hybrids.Length + 2; i < newGenomes.Length; i++)
-            {
-                int selection = random.Next(0, 4);
-                Perceptron[] old_ps = newGenomes[selection].getPerceptrons();
-                Perceptron[] new_ps = new Perceptron[old_ps.Length];
-                for (int o = 0; o < new_ps.Length; o++)
-                {
-                    new_ps[o] = new Perceptron(old_ps[o].getWeights(), old_ps[o].getBias());
-                }
-
-                newGenomes[i] = new NeuroNetwork(neuro_input_nodes, neurons_per_layer, neuro_output_nodes, random, new_ps);
-                newGenomes[i].applyMutations(random);
-            }
+            // Crossed-over / mutated solutions
+            for (int i = 2; i < newGenomes.Length; i++)
+                newGenomes[i] = crossover(genomes_dictionary.Keys.First(), genomes_dictionary.Keys.Last());
 
             // Replace old generation with new one
             genomes = newGenomes;
         }
 
-        private NeuroNetwork[] crossover(NeuroNetwork genome1, NeuroNetwork genome2)
+        private sbyte[] crossover(sbyte[] genome1, sbyte[] genome2)
         {
-            NeuroNetwork newGenome1 = new NeuroNetwork(neuro_input_nodes, neurons_per_layer, neuro_output_nodes, random),
-                         newGenome2 = new NeuroNetwork(neuro_input_nodes, neurons_per_layer, neuro_output_nodes, random);
+            sbyte[] newGenome = new sbyte[genome1.Length];
 
-            object[] genome1_perceptrons = genome1.crossOverSplit(), genome2_perceptrons = genome2.crossOverSplit();
+            // Set in how many parts the genome should be divided in
+            int parts = random.Next(2, 3);
+            // Set the splitting points
+            int[] splitPoints = new int[parts - 1];
+            for (int i = 0; i < splitPoints.Length; i++)
+            {
+                splitPoints[i] = (int)Math.Ceiling(random.NextDouble() * newGenome.Length);
+            }
+            splitPoints = splitPoints.OrderBy(key => key).ToArray();
 
-            newGenome1.setPerceptrons((Perceptron[])genome1_perceptrons[0], (Perceptron[])genome2_perceptrons[1]);
-            newGenome2.setPerceptrons((Perceptron[])genome2_perceptrons[0], (Perceptron[])genome1_perceptrons[1]);
+            // Mixing the fathers genomes
+            bool takeFirstGenome = true;
+            int currSplit = 0;
+            for (int i = 0; i < newGenome.Length; i++)
+            {
+                if (currSplit < splitPoints.Length && i > splitPoints[currSplit])
+                {
+                    takeFirstGenome = !takeFirstGenome;
+                    currSplit++;
+                }
 
-            return new NeuroNetwork[] { newGenome1, newGenome2 };
+                // Apply some mutations
+                mutationProb = 1 / fitness.Max();
+                if (mutationProb > .2) mutationProb = .2;
+
+                /*int m1 = genome1[i], m2 = genome2[i], m = random.Next(-40, 40);
+                if (random.NextDouble() < mutationProb)
+                {
+                    m1 += m;
+                    m2 += m;
+
+                    if (m1 < -128) m1 = -128;
+                    if (m1 > 127) m1 = 127;
+                    if (m2 < -128) m2 = -128;
+                    if (m2 > 127) m2 = 127;
+                }
+                if (takeFirstGenome) newGenome[i] = (sbyte)m1;
+                else newGenome[i] = (sbyte)m2;*/
+
+                if (takeFirstGenome) newGenome[i] = random.NextDouble() < mutationProb ? (sbyte)random.Next(-128, 128) : genome1[i];
+                else newGenome[i] = random.NextDouble() < mutationProb ? (sbyte)random.Next(-128, 127) : genome2[i];
+            }
+            return newGenome;
         }
-
+        
         public void resetGenerations()
         {
-            genomes = null;
+            brains = null;
             fitness = null;
         }
 
@@ -119,7 +149,7 @@ namespace GeneticAlgorithm
 
         public double[] executeGenome(int genomeId, double[] inputs)
         {
-            return genomes[genomeId].elaborate(inputs);
+            return brains[genomeId].elaborate(inputs);
         }
 
         public double[][] executeGeneration(double[] inputs)
@@ -127,7 +157,7 @@ namespace GeneticAlgorithm
             double[][] result = new double[genomes_count][];
             for (int i = 0; i < genomes_count; i++)
             {
-                result[i] = genomes[i].elaborate(inputs);
+                result[i] = brains[i].elaborate(inputs);
             }
             return result;
         }
@@ -135,6 +165,16 @@ namespace GeneticAlgorithm
         public void setFitness(double[] fitness_values)
         {
             fitness = fitness_values;
+        }
+
+        public void printANetwork(int genomeId, Material neuronMaterial)
+        {
+            brains[genomeId].print(neuronMaterial);
+        }
+
+        public NeuroNetwork getBrain(int id)
+        {
+            return brains[id];
         }
 
     }

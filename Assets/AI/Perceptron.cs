@@ -1,66 +1,26 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
-namespace NeuralNetwork
+namespace GeneticAlgorithm
 {
     public class Perceptron
     {
 
-        protected double[] weights;
-        protected double bias;
-        
-        private double output;
+        private double[] weights;
+        private double bias, output;
 
-        public Perceptron(int input_nodes, Random random, bool isOutputLayer = false)
+        public Perceptron(sbyte[] weights, sbyte bias)
         {
-            // Initialize perceptron with weights and bias to random
-            double[] weights = new double[input_nodes];
-
-            // Randomize input weights
-            for (int i = 0; i < input_nodes; i++)
-            {
-                weights[i] = random.NextDouble() * .2 - .1;
-            }
-
-            this.weights = weights;
-            if (isOutputLayer) bias = 0;
-            else bias = random.NextDouble() * .2 - .1;
-        }
-        public Perceptron(double[] weights, double bias)
-        {
+            // Initialize perceptron with weights and bias
             this.weights = new double[weights.Length];
             for (int i = 0; i < weights.Length; i++)
-                this.weights[i] = weights[i];
-
-            this.bias = bias;
-        }
-
-        // Set/Get weights
-        public void setWeights(double[] weights)
-        {
-            this.weights = weights;
-        }
-        public double[] getWeights()
-        {
-            return weights;
-        }
-
-        // Set/Get bias
-        public void setBias(double bias)
-        {
-            this.bias = bias;
-        }
-        public double getBias()
-        {
-            return bias;
+                this.weights[i] = weights[i] / (double)128;
+            this.bias = bias / (double)128;
         }
 
         // Main perceptron elaborator
         public void execute_perceptron(double[] input)
         {
-            output = tanh(dot_product(input, weights) + bias);
+            output = sigmoid(dot_product(input, weights) + bias);
         }
 
         public double getOutput()
@@ -74,10 +34,7 @@ namespace NeuralNetwork
             double result = 0;
             for (int i = 0; i < vector1.Length; i++)
             {
-                for (int o = 0; o < vector2.Length; o++)
-                {
-                    result += vector1[i] * vector2[o];
-                }
+                result += vector1[i] * vector2[i];
             }
             return result;
         }
@@ -97,21 +54,5 @@ namespace NeuralNetwork
             return Math.Tanh(x);
         }
 
-        // Apply mutations
-        public void mutate(Random random)
-        {
-            double random_limit = .05, r;
-            // Mutate weights
-            for (int i = 0; i < weights.Length; i++)
-            {
-                r = random.NextDouble();
-                if (r < random_limit)
-                    weights[i] = r * .2 - .1;
-            }
-            // Mutate bias
-            r = random.NextDouble();
-            if (r < random_limit)
-                bias = r * .2 - .1;
-        }
     }
 }

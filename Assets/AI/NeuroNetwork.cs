@@ -1,65 +1,78 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using System.Linq;
+using UnityEngine;
 
-namespace NeuralNetwork
+namespace GeneticAlgorithm
 {
     // Considering the output layer as the result of last layer of HLs
-    public class NeuroNetwork
+    public class NeuroNetwork : MonoBehaviour
     {
         
         // Network params
         private int input_nodes, output_nodes, hidden_layers_count;
         private int[] neurons_per_layer;
-        Random random;
 
         // Network structure as array of perceptrons
         private Perceptron[] perceptrons;
+        public double[] n_values;
 
-        public NeuroNetwork(int input_nodes, int[] neurons_per_layer, int output_nodes, Random random, Perceptron[] perceptrons = null)
+        public NeuroNetwork(int input_nodes, int[] neurons_per_layer, int output_nodes, sbyte[] genome)
         {
             // Set parameters of network
             this.input_nodes = input_nodes;
             this.output_nodes = output_nodes;
-            this.hidden_layers_count = neurons_per_layer.Length + 1; // Adds 1 becouse of output layer
+            this.hidden_layers_count = neurons_per_layer.Length + 1; // Adds 1 because of output layer
             this.neurons_per_layer = neurons_per_layer.Concat(new int[] { output_nodes }).ToArray(); // Concat the out layer to hidden layer
-            this.random = random;
 
             // Create network structure
-            createNetwork(perceptrons);
+            createNetwork(genome);
         }
 
-        private void createNetwork(Perceptron[] ps)
+        private void createNetwork(sbyte[] genome)
         {
-            if (perceptrons == null)
-            {
-                perceptrons = new Perceptron[neurons_per_layer.Sum()];
-                int p_index = 0;
-                for (int i = 0; i < hidden_layers_count; i++)
-                {
-                    // Check if is last layer (output layer)
-                    bool isOutputLayer = false;
-                    if (i == hidden_layers_count - 1) isOutputLayer = true;
+            perceptrons = new Perceptron[neurons_per_layer.Sum()];
+            n_values = new double[input_nodes + neurons_per_layer.Sum()];
 
-                    for (int p = 0; p < neurons_per_layer[i]; p++)
-                    {
-                        int input_nodes;
-                        if (i == 0) input_nodes = this.input_nodes;
-                        else input_nodes = neurons_per_layer[i - 1];
-                        perceptrons[p_index++] = new Perceptron(input_nodes, random, isOutputLayer);
-                    }
-                }
-            }
-            else
+            // Indexes
+            int currLayer = 0, curr_perceptron_all_layers = 0, curr_perceptron_this_layer = 0;
+
+            for (int i = 0; i < genome.Length;)
             {
-                perceptrons = ps;
+                if (curr_perceptron_this_layer > neurons_per_layer[currLayer] - 1)
+                {
+                    curr_perceptron_this_layer = 0;
+                    currLayer++;
+                }
+
+                int input_length;
+                if (currLayer == 0) input_length = input_nodes;
+                else input_length = neurons_per_layer[currLayer - 1];
+                
+                // Set perceptron weights and bias
+                sbyte[] weights = new sbyte[input_length];
+                
+                for (int w = 0; w < weights.Length; w++)
+                    weights[w] = genome[i++];
+                sbyte bias = genome[i++];
+                /*if (currLayer == hidden_layers_count - 1) bias = 0;*/
+                perceptrons[curr_perceptron_all_layers] = new Perceptron(weights, bias);
+
+                curr_perceptron_this_layer++;
+                curr_perceptron_all_layers++;
             }
         }
 
         // Elaborate input signals through NeuralNetwork
         public double[] elaborate(double[] datas)
         {
+
+            if (showNet)
+            {
+                for (int a = 0; a < datas.Length; a++)
+                {
+                    inputs_n[a].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, (float)(datas[a] < .1 ? .1f : datas[a])));
+                    n_values[a] = double.Parse(datas[a].ToString("F2"));
+                }
+            }
 
             // Elaborate datas within Hidden Layers
             int p_index = 0;
@@ -70,7 +83,15 @@ namespace NeuralNetwork
                     double[] inputs;
                     if (i == 0) inputs = datas;
                     else inputs = getPerceptronsOutputs(i - 1);
-                    perceptrons[p_index++].execute_perceptron(inputs);
+                    perceptrons[p_index].execute_perceptron(inputs);
+
+                    if (showNet)
+                    {
+                        neurons[p_index].GetComponent<MeshRenderer>().material.SetColor("_EmissionColor", new Color(0, 0, (float)(perceptrons[p_index].getOutput() < .1 ? .1f : perceptrons[p_index].getOutput())));
+                        n_values[datas.Length + p_index] = double.Parse(perceptrons[p_index].getOutput().ToString("F2"));
+                    }
+
+                    p_index++;
                 }
             }
 
@@ -99,47 +120,49 @@ namespace NeuralNetwork
             return outputs;
         }
 
-        // Set weights and biases of network
-        public void setPerceptrons(Perceptron[] perceptrons)
+        // Static function for fast calculation of a genome length
+        public static int calculateGenomeLength(int input_length, int[] neurons_per_layer, int output_legth)
         {
-            for (int i = 0; i < perceptrons.Length; i++)
-                this.perceptrons[i] = perceptrons[i];
-        }
-        public void setPerceptrons(Perceptron[] perceptrons1, Perceptron[] perceptrons2)
-        {
-            for (int i = 0; i < perceptrons1.Length; i++)
-                perceptrons[i] = perceptrons1[i];
-
-            for (int i = perceptrons1.Length; i < perceptrons2.Length; i++)
-                perceptrons[i] = perceptrons2[i];
-        }
-
-        // Get weights and biases of network
-        public Perceptron[] getPerceptrons()
-        {
-            return perceptrons;
-        }
-
-        // Split genome to cross-over in genetic controller
-        public object[] crossOverSplit()
-        {
-            int p1_count = (int)Math.Ceiling(perceptrons.Length / 2.0), p2_count = perceptrons.Length - p1_count;
-            Perceptron[] p1 = new Perceptron[p1_count], p2 = new Perceptron[p2_count];
-            for (int i = 0; i < p1_count; i++)
-                p1[i] = perceptrons[i];
-            for (int i = p1_count; i < p2_count; i++)
-                p2[i] = perceptrons[i];
-            return new object[] { p1, p2 };
-        }
-
-        // Apply mutations to perceptrons - changing weights and biases
-        public void applyMutations(Random random)
-        {
-            for (int i = 0; i < perceptrons.Length; i++)
+            int genome_length = 0;
+            for (int i = 0; i < neurons_per_layer.Length; i++)
             {
-                perceptrons[i].mutate(random);
+                if (i == 0) genome_length += neurons_per_layer[i] * (input_length + 1);
+                else genome_length += neurons_per_layer[i] * (neurons_per_layer[i - 1] + 1);
             }
+            genome_length += output_legth * (neurons_per_layer[neurons_per_layer.Length - 1] + 1);
+            return genome_length;
         }
 
+        GameObject[] inputs_n, neurons;
+        bool showNet = false;
+        public void print(Material neuronMaterial)
+        {
+            inputs_n = new GameObject[input_nodes];
+            for (int i = 0; i < input_nodes; i++)
+            {
+                inputs_n[i] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                inputs_n[i].transform.position = new Vector3(-20, 50, ((input_nodes / 2 - i) * 3));
+                inputs_n[i].GetComponent<MeshRenderer>().material = neuronMaterial;
+                inputs_n[i].tag = "neuron";
+                inputs_n[i].name = i.ToString();
+            }
+
+            neurons = new GameObject[neurons_per_layer.Sum()];
+            int n = 0;
+            for (int l = 0; l < neurons_per_layer.Length; l++)
+            {
+                for (int nn = 0; nn < neurons_per_layer[l]; nn++)
+                {
+                    neurons[n] = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    neurons[n].transform.position = new Vector3(l * 20, 50, ((neurons_per_layer[l] / 2 - nn) * 5));
+                    neurons[n].GetComponent<MeshRenderer>().material = neuronMaterial;
+                    neurons[n].tag = "neuron";
+                    neurons[n].name = (n + input_nodes).ToString();
+                    n++;
+                }
+            }
+
+            showNet = true;
+        }
     }
 }
